@@ -23,17 +23,11 @@ export const auth = betterAuth({
             clientSecret: envVars.GOOGLE_CLIENT_SECRET,
             mapProfileToUser: (profile: any) => {
                 return {
-                    role: Role.STUDENT,
-                    needPasswordChange: false,
+                    role: Role.CUSTOMER,
                     emailVerified: true,
-                    isDeleted: false,
+                    isActive: true,
                     deletedAt: null,
-                    status: UserStatus.ACTIVE,
-                    lastLogin: new Date(),
-                    lastIpAddress: "",
-                    lastUserAgent: "",
-                    failedLoginAttempts: 0,
-                    lockedUntil: null,
+                    deletedById: null,
                 }
             }
         }
@@ -49,16 +43,10 @@ export const auth = betterAuth({
     },
     user: {
         additionalFields: {
-            role: { type: "string", required: true, defaultValue: Role.STUDENT },
-            status: { type: "string", required: true, defaultValue: UserStatus.ACTIVE },
-            needPasswordChange: { type: "boolean", required: true, defaultValue: false },
-            isDeleted: { type: "boolean", required: true, defaultValue: false },
+            role: { type: "string", required: true, defaultValue: Role.CUSTOMER },
+            isActive: { type: "boolean", required: true, defaultValue: true },
             deletedAt: { type: "date", required: false, defaultValue: null },
-            lastLogin: { type: "date", required: false, defaultValue: null },
-            lastIpAddress: { type: "string", required: false, defaultValue: null },
-            lastUserAgent: { type: "string", required: false, defaultValue: null },
-            failedLoginAttempts: { type: "number", required: true, defaultValue: 0 },
-            lockedUntil: { type: "date", required: false, defaultValue: null },
+            deletedById: { type: "string", required: false, defaultValue: null },
         }
     },
 

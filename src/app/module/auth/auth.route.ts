@@ -83,4 +83,4 @@ router.post(
 
 router.post("/logout", checkAuth(...allRoles), AuthController.logoutUser);
 
-export const AuthRoute = router;
+export const AuthRoute: Router = router;

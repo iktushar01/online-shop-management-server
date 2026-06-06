@@ -3,7 +3,7 @@ import AppError from "../errorHelpers/AppError";
 import { prisma } from "../lib/prisma";
 import { jwtUtils } from "../utils/jwt";
 import { cookieUtils } from "../utils/cookies";
-import { Role, UserStatus } from "../lib/prisma-exports";
+import { Role } from "../lib/prisma-exports";
 import { StatusCodes } from "http-status-codes";
 import { envVars } from "../../config/env";
 
@@ -44,11 +44,11 @@ export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Res
                     console.log("Session Expiring Soon!!");
                 }
 
-                if (user.status === UserStatus.SUSPENDED || user.status === UserStatus.DELETED) {
+                if (!user.isActive) {
                     throw new AppError(StatusCodes.UNAUTHORIZED, 'Unauthorized access! User is not active.');
                 }
 
-                if (user.isDeleted) {
+                if (user.deletedAt !== null) {
                     throw new AppError(StatusCodes.UNAUTHORIZED, 'Unauthorized access! User is deleted.');
                 }
 
@@ -60,6 +60,8 @@ export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Res
                     ...user,
                     userId: user.id,
                 } as any;
+                
+                return next();
             }
         }
 
@@ -80,14 +82,14 @@ export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Res
 
         const isUserExist = await prisma.user.findUnique({
             where: { id: (verifiedToken.decoded as any).userId },
-            select: { id: true, status: true, isDeleted: true }
+            select: { id: true, isActive: true, deletedAt: true }
         });
 
         if (!isUserExist) {
             throw new AppError(StatusCodes.UNAUTHORIZED, 'Unauthorized access! User no longer exists.');
         }
 
-        if (isUserExist.status === UserStatus.SUSPENDED || isUserExist.status === UserStatus.DELETED || isUserExist.isDeleted) {
+        if (!isUserExist.isActive || isUserExist.deletedAt !== null) {
             throw new AppError(StatusCodes.UNAUTHORIZED, 'Unauthorized access! User is not active or has been deleted.');
         }
 

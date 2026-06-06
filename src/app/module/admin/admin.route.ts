@@ -23,4 +23,4 @@ router.delete("/:id",
     checkAuth(Role.SUPER_ADMIN),
     AdminController.deleteAdmin);
 
-export const AdminRoutes = router;
+export const AdminRoutes: Router = router;

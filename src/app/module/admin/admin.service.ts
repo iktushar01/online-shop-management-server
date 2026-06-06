@@ -1,93 +1,25 @@
 import { StatusCodes } from "http-status-codes";
-import { ClassroomStatus, NoteStatus, Role, UserStatus } from "../../lib/prisma-exports";
+import { Role } from "../../lib/prisma-exports";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
 import { IRequestUser } from "../auth/auth.interface";
-import { IUpdateAdminPayload } from "./admin.interface";
 
 const adminPublicSelect = {
     id: true,
     name: true,
     email: true,
-    profilePhoto: true,
-    contactNumber: true,
-    isDeleted: true,
+    image: true,
+    isActive: true,
     deletedAt: true,
-    userId: true,
     createdAt: true,
     updatedAt: true,
-    user: {
-        select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            status: true,
-            emailVerified: true,
-            image: true,
-            isDeleted: true,
-            createdAt: true,
-            updatedAt: true,
-        },
-    },
 } as const;
 
-const assertSuperAdminRequester = (requestingUser: IRequestUser) => {
-    if (requestingUser.role !== Role.SUPER_ADMIN) {
-        throw new AppError(
-            StatusCodes.FORBIDDEN,
-            "Only Super Admin can manage admin accounts",
-        );
-    }
-};
-
-const getAdminRecordOrThrow = async (id: string) => {
-    const admin = await prisma.admin.findUnique({
-        where: { id },
-        select: {
-            id: true,
-            userId: true,
-            isDeleted: true,
-            user: {
-                select: {
-                    id: true,
-                    role: true,
-                    isDeleted: true,
-                },
-            },
-        },
-    });
-
-    if (!admin || admin.isDeleted || admin.user.isDeleted) {
-        throw new AppError(StatusCodes.NOT_FOUND, "Admin not found");
-    }
-
-    return admin;
-};
-
-const assertTargetCanBeManaged = (
-    targetRole: Role,
-    action: "update" | "delete",
-) => {
-    if (targetRole === Role.SUPER_ADMIN) {
-        throw new AppError(
-            StatusCodes.FORBIDDEN,
-            action === "delete"
-                ? "Super Admin accounts cannot be deleted"
-                : "Super Admin accounts cannot be updated from this endpoint",
-        );
-    }
-};
-
 const getAllAdmins = async (requestingUser: IRequestUser) => {
-    assertSuperAdminRequester(requestingUser);
-
-    const admins = await prisma.admin.findMany({
+    const admins = await prisma.user.findMany({
         where: {
-            isDeleted: false,
-            user: {
-                isDeleted: false,
-            },
+            role: Role.ADMIN,
+            deletedAt: null,
         },
         select: adminPublicSelect,
         orderBy: {
@@ -99,111 +31,68 @@ const getAllAdmins = async (requestingUser: IRequestUser) => {
 };
 
 const getDashboardStats = async (requestingUser: IRequestUser) => {
-    if (
-        requestingUser.role !== Role.ADMIN &&
-        requestingUser.role !== Role.SUPER_ADMIN
-    ) {
+    if (requestingUser.role !== Role.ADMIN) {
         throw new AppError(
             StatusCodes.FORBIDDEN,
-            "Only Admin or Super Admin can access dashboard stats",
+            "Only Admin can access dashboard stats",
         );
     }
 
-    const roleScope: "ADMIN" | "SUPER_ADMIN" =
-        requestingUser.role === Role.SUPER_ADMIN ? "SUPER_ADMIN" : "ADMIN";
-
     const [
         totalAdmins,
-        totalSuperAdmins,
-        totalClassrooms,
-        pendingClassrooms,
-        approvedClassrooms,
-        rejectedClassrooms,
-        totalSubjects,
-        totalNotes,
-        approvedNotes,
-        pendingNotes,
-        rejectedNotes,
-        totalComments,
-        recentClassrooms,
+        totalCustomers,
+        totalProducts,
+        totalCategories,
+        totalOrders,
+        totalReviews,
+        recentOrders,
     ] = await Promise.all([
-        prisma.admin.count({
-            where: {
-                isDeleted: false,
-                user: { isDeleted: false, role: Role.ADMIN },
-            },
+        prisma.user.count({
+            where: { role: Role.ADMIN, deletedAt: null },
         }),
-        prisma.admin.count({
-            where: {
-                isDeleted: false,
-                user: { isDeleted: false, role: Role.SUPER_ADMIN },
-            },
+        prisma.user.count({
+            where: { role: Role.CUSTOMER, deletedAt: null },
         }),
-        prisma.classroom.count(),
-        prisma.classroom.count({ where: { status: ClassroomStatus.PENDING } }),
-        prisma.classroom.count({ where: { status: ClassroomStatus.APPROVED } }),
-        prisma.classroom.count({ where: { status: ClassroomStatus.REJECTED } }),
-        prisma.subject.count(),
-        prisma.note.count(),
-        prisma.note.count({ where: { status: NoteStatus.APPROVED } }),
-        prisma.note.count({ where: { status: NoteStatus.PENDING } }),
-        prisma.note.count({ where: { status: NoteStatus.REJECTED } }),
-        prisma.comment.count(),
-        prisma.classroom.findMany({
+        prisma.product.count(),
+        prisma.category.count(),
+        prisma.order.count(),
+        prisma.review.count(),
+        prisma.order.findMany({
             take: 5,
             orderBy: { createdAt: "desc" },
-            select: {
-                id: true,
-                name: true,
-                institutionName: true,
-                status: true,
-                createdAt: true,
-                creator: {
+            include: {
+                user: {
                     select: {
                         id: true,
                         name: true,
                         email: true,
-                    },
-                },
-            },
+                    }
+                }
+            }
         }),
     ]);
 
     return {
-        roleScope,
         adminSummary: {
             totalAdmins,
-            totalSuperAdmins,
-            totalAdminAccounts: totalAdmins + totalSuperAdmins,
-        },
-        classroomSummary: {
-            total: totalClassrooms,
-            pending: pendingClassrooms,
-            approved: approvedClassrooms,
-            rejected: rejectedClassrooms,
+            totalCustomers,
         },
         contentSummary: {
-            subjects: totalSubjects,
-            notes: totalNotes,
-            approvedNotes,
-            pendingNotes,
-            rejectedNotes,
-            comments: totalComments,
+            products: totalProducts,
+            categories: totalCategories,
+            orders: totalOrders,
+            reviews: totalReviews,
         },
-        recentClassrooms,
+        recentOrders,
     };
 };
 
 const getAdminById = async (id: string, requestingUser: IRequestUser) => {
-    assertSuperAdminRequester(requestingUser);
-
-    const admin = await prisma.admin.findFirst({
+    const admin = await prisma.user.findFirst({
         where: {
             id,
-            isDeleted: false,
-            user: {
-                isDeleted: false,
-            },
+            role: Role.ADMIN,
+            deletedAt: null,
         },
         select: adminPublicSelect,
     });
@@ -217,13 +106,16 @@ const getAdminById = async (id: string, requestingUser: IRequestUser) => {
 
 const updateAdmin = async (
     id: string,
-    payload: IUpdateAdminPayload,
+    payload: any,
     requestingUser: IRequestUser,
 ) => {
-    assertSuperAdminRequester(requestingUser);
+    const adminRecord = await prisma.user.findFirst({
+        where: { id, role: Role.ADMIN, deletedAt: null }
+    });
 
-    const adminRecord = await getAdminRecordOrThrow(id);
-    assertTargetCanBeManaged(adminRecord.user.role, "update");
+    if (!adminRecord) {
+        throw new AppError(StatusCodes.NOT_FOUND, "Admin not found");
+    }
 
     const { admin } = payload;
 
@@ -231,13 +123,19 @@ const updateAdmin = async (
         throw new AppError(StatusCodes.BAD_REQUEST, "No admin fields provided for update");
     }
 
-    const updatedAdmin = await prisma.admin.update({
+    const updateData: any = {};
+    if (admin.name !== undefined) {
+        updateData.name = admin.name;
+    }
+    if (admin.profilePhoto !== undefined) {
+        updateData.image = admin.profilePhoto;
+    }
+
+    const updatedAdmin = await prisma.user.update({
         where: {
             id,
         },
-        data: {
-            ...admin,
-        },
+        data: updateData,
         select: adminPublicSelect,
     });
 
@@ -245,47 +143,37 @@ const updateAdmin = async (
 };
 
 const deleteAdmin = async (id: string, requestingUser: IRequestUser) => {
-    assertSuperAdminRequester(requestingUser);
+    const adminRecord = await prisma.user.findFirst({
+        where: { id, role: Role.ADMIN, deletedAt: null }
+    });
 
-    const adminRecord = await getAdminRecordOrThrow(id);
-    assertTargetCanBeManaged(adminRecord.user.role, "delete");
+    if (!adminRecord) {
+        throw new AppError(StatusCodes.NOT_FOUND, "Admin not found");
+    }
 
-    if (adminRecord.userId === requestingUser.userId) {
+    if (adminRecord.id === requestingUser.userId) {
         throw new AppError(StatusCodes.BAD_REQUEST, "You cannot delete yourself");
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-        await tx.admin.update({
+    const result = await prisma.$transaction(async (tx: any) => {
+        const deleted = await tx.user.update({
             where: { id },
             data: {
-                isDeleted: true,
                 deletedAt: new Date(),
+                isActive: false,
             },
-        });
-
-        await tx.user.update({
-            where: { id: adminRecord.userId },
-            data: {
-                isDeleted: true,
-                deletedAt: new Date(),
-                status: UserStatus.DELETED,
-            },
-        });
-
-        await tx.session.deleteMany({
-            where: { userId: adminRecord.userId },
-        });
-
-        await tx.account.deleteMany({
-            where: { userId: adminRecord.userId },
-        });
-
-        const admin = await tx.admin.findUnique({
-            where: { id },
             select: adminPublicSelect,
         });
 
-        return admin;
+        await tx.session.deleteMany({
+            where: { userId: id },
+        });
+
+        await tx.account.deleteMany({
+            where: { userId: id },
+        });
+
+        return deleted;
     });
 
     return result;

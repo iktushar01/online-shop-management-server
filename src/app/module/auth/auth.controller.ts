@@ -55,10 +55,9 @@ const registerStudent = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: StatusCodes.CREATED,
         success: true,
-        message: "Student registered successfully",
+        message: "Customer registered successfully",
         data: {
             user: result.user,
-            student: result.student,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
             token: result.token,
@@ -212,7 +211,6 @@ const forgetPassword = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         success: true,
-        // Generic message — do not confirm whether the email is registered
         message: "If that email is registered you will receive a reset OTP shortly",
         data: null,
     });
@@ -249,8 +247,6 @@ const createOAuthExchangeCode = (payload: {
     name: string;
     email: string;
     role: string;
-    status: string;
-    isDeleted?: boolean | null;
     emailVerified: boolean;
     image?: string | null | undefined;
 }) =>
@@ -260,8 +256,6 @@ const createOAuthExchangeCode = (payload: {
         name: payload.name,
         email: payload.email,
         role: payload.role,
-        status: payload.status,
-        isDeleted: !!payload.isDeleted,
         emailVerified: payload.emailVerified,
         image: payload.image ?? undefined,
     });
@@ -284,7 +278,6 @@ const googleLoginSuccess = catchAsync(async (req: Request, res: Response) => {
 
     const result = await AuthService.googleLoginSuccess(session);
 
-    // Validate redirect path — must start with "/" but not "//" (open redirect guard)
     const safeRedirect =
         redirectPath.startsWith("/") && !redirectPath.startsWith("//")
             ? redirectPath
@@ -324,8 +317,6 @@ const exchangeOAuthCode = catchAsync(async (req: Request, res: Response) => {
         name: payload.name as string,
         email: payload.email as string,
         role: payload.role as string,
-        status: payload.status as string,
-        isDeleted: Boolean(payload.isDeleted),
         emailVerified: Boolean(payload.emailVerified),
         image: (payload.image as string | undefined) ?? undefined,
     });

@@ -14,10 +14,10 @@ const userPublicSelect = {
     email: true,
     name: true,
     role: true,
-    status: true,
+    isActive: true,
     emailVerified: true,
     image: true,
-    isDeleted: true,
+    deletedAt: true,
     createdAt: true,
     updatedAt: true,
 } as const;
@@ -31,14 +31,6 @@ const assertEmailNotTaken = async (email: string) => {
             StatusCodes.CONFLICT,
             "A user with this email already exists",
         );
-    }
-};
-
-const rollbackAuthUser = async (userId: string) => {
-    try {
-        await prisma.user.delete({ where: { id: userId } });
-    } catch (err) {
-        console.error("Rollback failed for auth user:", userId, err);
     }
 };
 
@@ -72,31 +64,15 @@ const createAdmin = async (
 
     const { user: authUser } = await auth.api.signUpEmail({
         body: {
-            ...payload.admin,
+            name: payload.admin.name,
+            email: payload.admin.email,
             password: payload.password,
             role: payload.role,
-            needPasswordChange: false,
         },
     });
 
-    try {
-        return await prisma.$transaction(async (tx) => {
-            return tx.admin.create({
-                data: {
-                    userId: authUser.id,
-                    ...payload.admin,
-                },
-                include: {
-                    user: { select: userPublicSelect },
-                },
-            });
-        });
-    } catch (error) {
-        await rollbackAuthUser(authUser.id);
-        throw error;
-    }
+    return authUser;
 };
-
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 

@@ -31,7 +31,6 @@ export const seedSuperAdmin = async () => {
                 password: envVars.SUPER_ADMIN_PASSWORD,
                 name: "Super Admin",
                 role: Role.SUPER_ADMIN,
-                needPasswordChange: false,
                 rememberMe: false,
             }
         });
@@ -40,31 +39,12 @@ export const seedSuperAdmin = async () => {
             throw new Error("Failed to create super admin user through auth API");
         }
 
-        await prisma.$transaction(async (tx) => {
-            await tx.user.update({
-                where: {
-                    id: superAdminUser.user.id
-                },
-                data: {
-                    emailVerified: true,
-                }
-            });
-
-            await tx.admin.create({
-                data: {
-                    userId: superAdminUser.user.id,
-                    name: "Super Admin",
-                    email: trimmedEmail,
-                }
-            });
-        });
-
-        const superAdmin = await prisma.admin.findFirst({
+        await prisma.user.update({
             where: {
-                email: trimmedEmail,
+                id: superAdminUser.user.id
             },
-            include: {
-                user: true,
+            data: {
+                emailVerified: true,
             }
         });
 
@@ -73,7 +53,6 @@ export const seedSuperAdmin = async () => {
         console.error("Error seeding super admin: ", error);
         
         try {
-            // Use deleteMany to avoid "Record not found" error if the user was never created
             if (envVars.SUPER_ADMIN_EMAIL) {
                 await prisma.user.deleteMany({
                     where: {
