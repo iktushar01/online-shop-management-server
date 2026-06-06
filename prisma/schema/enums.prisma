@@ -66,3 +66,21 @@ enum AdminActionType {
   REJECT_REVIEW
   UPDATE_SETTINGS
 }
+
+
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum BorderRadius {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum LayoutStyle {
+  COMPACT
+  SPACIOUS
+}

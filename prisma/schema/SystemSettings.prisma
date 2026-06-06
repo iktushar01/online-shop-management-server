@@ -1,0 +1,40 @@
+model SystemSettings {
+  id                String   @id @default(uuid())
+
+  // Branding
+  storeName         String
+  logoUrl           String?
+  faviconUrl        String?
+
+  // Theme control
+  primaryColor      String?
+  secondaryColor    String?
+  themeMode         ThemeMode @default(LIGHT)
+  fontFamily        String?
+  borderRadius      BorderRadius @default(MEDIUM)
+  layoutStyle       LayoutStyle @default(COMPACT)
+
+  // UI Content
+  bannerImages      Json?
+  footerText        String?
+
+  // Contact info
+  contactEmail      String?
+  contactPhone      String?
+  address           String?
+
+  // SEO
+  seoTitle          String?
+  seoDescription    String?
+  socialLinks       Json?
+
+  // System control
+  currency          String @default("USD")
+  timezone          String @default("UTC")
+  isMaintenanceMode Boolean @default(false)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("system_settings")
+}
