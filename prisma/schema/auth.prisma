@@ -1,0 +1,90 @@
+// Credentials (hashed password) live on Account.password via better-auth — never store plain text.
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  image         String?
+  deletedAt     DateTime?
+  deletedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  deletedBy User?  @relation("UserDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  deletedUsers User[] @relation("UserDeletedBy")
+
+  accounts  Account[]
+  sessions  Session[]
+  orders    Order[]
+  carts     Cart[]
+  addresses Address[]
+  reviews   Review[]
+  notifications Notification[]
+
+  adminActionLogs  AdminActionLog[]
+  inventoryLogs    InventoryLog[]
+
+  productsCreated  Product[]  @relation("ProductCreatedBy")
+  productsUpdated  Product[]  @relation("ProductUpdatedBy")
+  productsDeleted  Product[]  @relation("ProductDeletedBy")
+  categoriesCreated Category[] @relation("CategoryCreatedBy")
+  categoriesUpdated Category[] @relation("CategoryUpdatedBy")
+  categoriesDeleted Category[] @relation("CategoryDeletedBy")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([providerId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}

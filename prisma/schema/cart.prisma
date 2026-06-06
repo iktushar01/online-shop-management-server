@@ -1,0 +1,35 @@
+// Exactly one of userId or sessionId must be set (enforce in application layer).
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String?
+  sessionId String?    @unique
+  expiresAt DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@unique([userId])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@map("carts")
+}
+
+model CartItem {
+  id               String          @id @default(uuid())
+  cartId           String
+  productId        String
+  productVariantId String?
+  quantity         Int             @default(1)
+  cart             Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId, productVariantId])
+  @@index([cartId])
+  @@index([productId])
+  @@index([productVariantId])
+  @@map("cart_items")
+}

@@ -1,0 +1,115 @@
+model Product {
+  id            String    @id @default(uuid())
+  title         String
+  slug          String    @unique
+  description   String    @db.Text
+  price         Decimal   @db.Decimal(12, 2)
+  discountPrice Decimal?  @db.Decimal(12, 2)
+  sku           String    @unique
+  stockQuantity Int       @default(0)
+  isActive      Boolean   @default(true)
+  categoryId    String?
+  deletedAt     DateTime?
+  deletedById   String?
+  createdById   String?
+  updatedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images         ProductImage[]
+  variantGroups  VariantGroup[]
+  variants       ProductVariant[]
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+  reviews        Review[]
+  inventoryLogs  InventoryLog[]
+
+  createdBy User? @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy User? @relation("ProductDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([sku])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  url       String
+  altText   String?
+  isPrimary Boolean @default(false)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([isPrimary])
+  @@map("product_images")
+}
+
+model VariantGroup {
+  id        String         @id @default(uuid())
+  name      String
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options   VariantOption[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([productId, name])
+  @@index([productId])
+  @@map("variant_groups")
+}
+
+model VariantOption {
+  id             String                  @id @default(uuid())
+  value          String
+  variantGroupId String
+  variantGroup   VariantGroup            @relation(fields: [variantGroupId], references: [id], onDelete: Cascade)
+  mappings       ProductVariantMapping[]
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@unique([variantGroupId, value])
+  @@index([variantGroupId])
+  @@map("variant_options")
+}
+
+model ProductVariant {
+  id            String                  @id @default(uuid())
+  productId     String
+  sku           String?                 @unique
+  price         Decimal?                @db.Decimal(12, 2)
+  discountPrice Decimal?                @db.Decimal(12, 2)
+  stockQuantity Int                     @default(0)
+  isActive      Boolean                 @default(true)
+  product       Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  mappings      ProductVariantMapping[]
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  inventoryLogs InventoryLog[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([productId])
+  @@index([sku])
+  @@index([isActive])
+  @@map("product_variants")
+}
+
+model ProductVariantMapping {
+  id               String         @id @default(uuid())
+  productVariantId String
+  variantOptionId  String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  variantOption    VariantOption  @relation(fields: [variantOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([productVariantId, variantOptionId])
+  @@index([productVariantId])
+  @@index([variantOptionId])
+  @@map("product_variant_mappings")
+}

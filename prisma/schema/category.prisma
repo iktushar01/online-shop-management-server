@@ -1,0 +1,22 @@
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  deletedById String?
+  createdById String?
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products  Product[]
+  createdBy User? @relation("CategoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("CategoryUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy User? @relation("CategoryDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("categories")
+}

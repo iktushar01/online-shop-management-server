@@ -1,0 +1,21 @@
+model InventoryLog {
+  id               String             @id @default(uuid())
+  productId        String
+  productVariantId String?
+  adminId          String?
+  changeQuantity   Int
+  reason           InventoryLogReason
+  metadata         Json?
+  createdAt        DateTime           @default(now())
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  admin          User?           @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([productVariantId])
+  @@index([adminId])
+  @@index([reason])
+  @@index([createdAt])
+  @@map("inventory_logs")
+}
